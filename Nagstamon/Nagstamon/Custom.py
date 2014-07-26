@@ -31,7 +31,7 @@ from Nagstamon.Server.op5Monitor import Op5MonitorServer
 from Nagstamon.Server.Opsview import OpsviewServer
 from Nagstamon.Server.Thruk import ThrukServer
 from Nagstamon.Server.Zabbix import ZabbixServer
-
+from Nagstamon.Server.Dude import DudeServer
 
 # moved registration process because of circular dependencies
 # order of registering affects sorting in server type list in add new server dialog
@@ -43,4 +43,4 @@ register_server(Op5MonitorServer)
 register_server(OpsviewServer)
 register_server(ThrukServer)
 register_server(ZabbixServer)
-
+register_server(DudeServer)
