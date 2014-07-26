@@ -30,10 +30,15 @@ class DudeServer(GenericServer):
                                      ("page", 'start'),\
                                      ("user", self.username),\
                                      ("password", self.password)])
-        result = self.FetchURL(self.monitor_url+'/dude/main.html', giveback="raw", cgi_data=cgi_data)
         result = self.FetchURL(self.monitor_url+'/dude/main.html?page=devices')
         
-        table = result.result('table', {'class': 'tbl'})[0]
+        tables = result.result('table', {'class': 'tbl'}) 
+        if len(tables) == 0 :
+          result = self.FetchURL(self.monitor_url+'/dude/main.html', giveback="raw", cgi_data=cgi_data)
+          result = self.FetchURL(self.monitor_url+'/dude/main.html?page=devices')
+          tables = result.result('table', {'class': 'tbl'}) 
+
+        table = tables[0]
         if len(table('tbody')) == 0 :
             trs = table('tr', {'style': 'background: #ffc0c0;'}, recursive=False)
         else :
@@ -52,6 +57,10 @@ class DudeServer(GenericServer):
                     n["map"] = str(tds[3].a.string)
                 except :
                     n["map"] = 'xxxxx'
+                try :
+                    n["deviceinfo_url"] = str(tds[0].a['href'])
+                except :
+                    n["deviceinfo_url"] = 'xxxxx'
 
                 new_host = n["host"]
                 self.new_hosts[new_host] = GenericHost()
@@ -60,9 +69,18 @@ class DudeServer(GenericServer):
                 self.new_hosts[new_host].last_check = 'n/a'
                 self.new_hosts[new_host].duration = 'n/a'
                 self.new_hosts[new_host].attempt = 'n/a'
-                self.new_hosts[new_host].status_information = n["map"]
+                self.new_hosts[new_host].status_information = n["map"] 
                 self.new_hosts[new_host].site = 'n/a'
-                self.new_hosts[new_host].address = 'n/a'
+                self.new_hosts[new_host].deviceinfo_url = n["deviceinfo_url"]
+                #self.new_hosts[new_host].address = n["address"]
         
         self.isChecking = False
         return Result()
+
+    def GetHost(self, host):
+        if str(self.conf.connect_by_host) == "True":
+            return Result(result=host)
+
+        result = self.FetchURL(self.monitor_url+self.hosts[host].deviceinfo_url)
+        address = result.result('input', {'name': 'address'})[0]['value']
+        return Result(result=address)
