@@ -119,6 +119,25 @@ class DudeServer(GenericServer):
                     self.new_hosts[new_host].services[n['service']].scheduled_downtime = False
                     self.new_hosts[new_host].services[n['service']].status_type = 'n/a'
 
+        # Acknowledged services are listed as such AND as down
+        if len(table('tbody')) == 0 :
+            trs = table('tr', {'style': 'background: #c0c0ff;'}, recursive=False)
+        else :
+            tbody = table('tbody')[0]
+            trs = tbody('tr', recursive=False)
+        trs.pop(0)
+        for tr in trs :
+            if len(tr('td', recursive=False)) > 1 :
+                n = dict()
+                tds = tr('td', recursive=False)
+
+                n["host"] = str(tds[2].a.string)
+                n["service"] = str(tds[3].a.string)
+
+                if self.new_hosts.has_key(n["host"]):
+                    if self.new_hosts[n["host"]].services.has_key(n["service"]):
+                        self.new_hosts[n["host"]].services[n["service"]].acknowledged = True
+
         self.isChecking = False
         return Result()
 
