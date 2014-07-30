@@ -50,7 +50,7 @@ class DudeServer(GenericServer):
                 n = dict()
                 tds = tr('td', recursive=False)
                 try :
-                    n["host"] = str(tds[0].a.string)
+                    n["host"] = str(tds[0].a.string).replace('&gt;', '>')
                 except :
                     n["host"] = 'xxxxx'
                 try :
@@ -94,7 +94,7 @@ class DudeServer(GenericServer):
                 n = dict()
                 tds = tr('td', recursive=False)
 
-                n["host"] = str(tds[2].a.string)
+                n["host"] = str(tds[2].a.string).replace('&gt;', '>')
                 n["service"] = str(tds[3].a.string)
 
                 new_host = n["host"]
