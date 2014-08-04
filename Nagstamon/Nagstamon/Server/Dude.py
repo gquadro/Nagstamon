@@ -45,7 +45,37 @@ class DudeServer(GenericServer):
         else :
             tbody = table('tbody')[0]
             trs = tbody('tr', recursive=False)
-        trs.pop(0)
+        for tr in trs :
+            if len(tr('td', recursive=False)) > 1 :
+                n = dict()
+                tds = tr('td', recursive=False)
+                try :
+                    n["host"] = str(tds[0].a.string).replace('&gt;', '>')
+                except :
+                    n["host"] = 'xxxxx'
+                try :
+                    n["map"] = str(tds[3].a.string)
+                except :
+                    n["map"] = 'xxxxx'
+                try :
+                    n["deviceinfo_url"] = str(tds[0].a['href'])
+                except :
+                    n["deviceinfo_url"] = 'xxxxx'
+        
+                new_host = n["host"]
+                if not self.new_hosts.has_key(n["host"]):
+                    self.new_hosts[new_host] = GenericHost()
+                    self.new_hosts[new_host].name = n["host"]
+                    self.new_hosts[new_host].status = 'DOWN'
+                    self.new_hosts[new_host].last_check = 'n/a'
+                    self.new_hosts[new_host].duration = 'n/a'
+                    self.new_hosts[new_host].attempt = 'n/a'
+                    self.new_hosts[new_host].status_information = n["map"] 
+                    self.new_hosts[new_host].site = 'n/a'
+                    self.new_hosts[new_host].deviceinfo_url = n["deviceinfo_url"]
+                    #self.new_hosts[new_host].address = n["address"]
+
+        trs = table('tr', {'style': 'background: #c0c0ff;'}, recursive=False)
         for tr in trs :
             if len(tr('td', recursive=False)) > 1 :
                 n = dict()
@@ -69,6 +99,7 @@ class DudeServer(GenericServer):
                     self.new_hosts[new_host].name = n["host"]
                     self.new_hosts[new_host].status = 'DOWN'
                     self.new_hosts[new_host].last_check = 'n/a'
+                    self.new_hosts[new_host].acknowledged = True
                     self.new_hosts[new_host].duration = 'n/a'
                     self.new_hosts[new_host].attempt = 'n/a'
                     self.new_hosts[new_host].status_information = n["map"] 
