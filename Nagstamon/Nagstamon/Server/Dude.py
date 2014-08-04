@@ -22,6 +22,7 @@ class DudeServer(GenericServer):
 
     def __init__(self, **kwds):
         GenericServer.__init__(self, **kwds)
+	self.MENU_ACTIONS = []
 
     def _get_status(self):
         self.new_hosts = dict()
