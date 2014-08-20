@@ -41,6 +41,11 @@ DEFAULT_LOCATION = os.path.join('..', 'Nagstamon')
 BUILD_HELPERS = 'helpers'
 REQUIRED_FILES = BUILD_HELPERS + os.sep + 'required_files.txt'
 
+# get version from central version file
+fversion = open('../VERSION')
+VERSION = fversion.readline().strip()
+fversion.close()
+
 def execute_script_lines(script_lines, opt_dict):
     for line in script_lines:
         command = line % opt_dict
@@ -49,7 +54,7 @@ def execute_script_lines(script_lines, opt_dict):
 
 def get_opt_dict(options):
     opt_dict = vars(options)
-    opt_dict.update({ 'installer': INSTALLER_DIR, 'default_location': DEFAULT_LOCATION })
+    opt_dict.update({ 'installer': INSTALLER_DIR, 'default_location': DEFAULT_LOCATION, 'version': VERSION })
     return opt_dict
 
 def get_required_files(location, required_file_list):
@@ -92,9 +97,19 @@ def winmain():
     # arguments for xcopying gtk windows theme stuff
     opt_dict.update({ 'gtk-windows-theme':BUILD_HELPERS + os.sep + 'gtk-windows-theme' + os.sep + '*.*'})
 
+    # Microsoft C runtime DLLs 2008 SP1 are needed on older systems 
+    if not os.path.exists('installer/windows/Microsoft.VC90.CRT.manifest') or\
+       not os.path.exists('installer/windows/msvcm90.dll') or\
+       not os.path.exists('installer/windows/msvcp90.dll') or\
+       not os.path.exists('installer/windows/msvcr90.dll'):
+        print "Please put Microsoft C runtime DLL 2008 SP1 into installer/windows."
+        sys.exit(1)
+
     script_lines = [
         '%(pyinstaller)s\pyinstaller.py --noconfirm nagstamon.spec',
         'xcopy "%(resources_dir)s" dist\\nagstamon\\resources /y /e /i /h /EXCLUDE:helpers\excludelist.txt',
+        'xcopy "installer\\windows\\*.dll" dist\\nagstamon /y /i /h ',
+        'xcopy "installer\\windows\\*.manifest" dist\\nagstamon /y /i /h ',
         'cd %(dist)s & del /q /f %(exclude_dlls)s & cd ..'
     ]
 
@@ -184,7 +199,7 @@ def rpmmain():
     if not os.path.isfile('%s/nagstamon.spec' % (options.redhat)):
         print 'Missing required "nagstamon.spec" file in "%s" directory' % options.redhat
         return
-    execute_script_lines(['cd %(target)s; ln -s %(redhat)s; tar -czf redhat/nagstamon_1.0rc2.tar.gz .; fakeroot rpmbuild --define "_sourcedir %(redhat)s" -ba redhat/nagstamon.spec; rm redhat'],
+    execute_script_lines(['cd %(target)s; ln -s %(redhat)s; tar -czf redhat/nagstamon_%(version)s.tar.gz .; fakeroot rpmbuild --define "_sourcedir %(redhat)s" -ba redhat/nagstamon.spec; rm redhat'],
                          get_opt_dict(options))
 
     print "\nFind .rpm output in $HOME/rpmbuild/RPMS/noarch/.\n"
