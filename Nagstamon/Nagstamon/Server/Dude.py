@@ -12,6 +12,18 @@ from Nagstamon import Actions
 from Nagstamon.Objects import *
 from Nagstamon.Server.Generic import GenericServer
 
+#Exception in thread zDude:
+#Traceback (most recent call last):
+#  File "/usr/lib64/python2.7/threading.py", line 810, in __bootstrap_inner
+#    self.run()
+#  File "/usr/lib64/python2.7/site-packages/Nagstamon/Actions.py", line 119, in run
+#    server_status = self.server.GetStatus(output=self.output)
+#  File "/usr/lib64/python2.7/site-packages/Nagstamon/Server/Generic.py", line 761, in GetStatus
+#    status = self._get_status()
+#  File "/usr/lib64/python2.7/site-packages/Nagstamon/Server/Dude.py", line 36, in _get_status
+#    tables = result.result('table', {'class': 'tbl'})
+#TypeError: 'str' object is not callable
+
 class DudeServer(GenericServer):
     TYPE = 'Dude'
 
@@ -27,148 +39,160 @@ class DudeServer(GenericServer):
     def _get_status(self):
         self.new_hosts = dict()
         
-        cgi_data = urllib.urlencode([("process", 'login'),\
-                                     ("page", 'start'),\
-                                     ("user", self.username),\
-                                     ("password", self.password)])
-        result = self.FetchURL(self.monitor_url+'/dude/main.html?page=devices')
-        
-        tables = result.result('table', {'class': 'tbl'}) 
-        if len(tables) == 0 :
-          result = self.FetchURL(self.monitor_url+'/dude/main.html', giveback="raw", cgi_data=cgi_data)
-          result = self.FetchURL(self.monitor_url+'/dude/main.html?page=devices')
-          tables = result.result('table', {'class': 'tbl'}) 
+        try:
+            cgi_data = urllib.urlencode([("process", 'login'),\
+                                         ("page", 'start'),\
+                                         ("user", self.username),\
+                                         ("password", self.password)])
+            result = self.FetchURL(self.monitor_url+'/dude/main.html?page=devices')
+            
+            tables = result.result('table', {'class': 'tbl'}) 
+            if len(tables) == 0 :
+              result = self.FetchURL(self.monitor_url+'/dude/main.html', giveback="raw", cgi_data=cgi_data)
+              result = self.FetchURL(self.monitor_url+'/dude/main.html?page=devices')
+              tables = result.result('table', {'class': 'tbl'}) 
+    
+            table = tables[0]
+            if len(table('tbody')) == 0 :
+                trs = table('tr', {'style': 'background: #ffc0c0;'}, recursive=False)
+            else :
+                tbody = table('tbody')[0]
+                trs = tbody('tr', recursive=False)
+            for tr in trs :
+                if len(tr('td', recursive=False)) > 1 :
+                    n = dict()
+                    tds = tr('td', recursive=False)
+                    try :
+                        n["host"] = str(tds[0].a.string).replace('&gt;', '>')
+                    except :
+                        n["host"] = 'xxxxx'
+                    try :
+                        n["map"] = str(tds[3].a.string)
+                    except :
+                        n["map"] = 'xxxxx'
+                    try :
+                        n["deviceinfo_url"] = str(tds[0].a['href'])
+                    except :
+                        n["deviceinfo_url"] = 'xxxxx'
+            
+                    new_host = n["host"]
+                    if not self.new_hosts.has_key(n["host"]):
+                        self.new_hosts[new_host] = GenericHost()
+                        self.new_hosts[new_host].name = n["host"]
+                        self.new_hosts[new_host].status = 'DOWN'
+                        self.new_hosts[new_host].last_check = 'n/a'
+                        self.new_hosts[new_host].duration = 'n/a'
+                        self.new_hosts[new_host].attempt = 'n/a'
+                        self.new_hosts[new_host].status_information = n["map"] 
+                        self.new_hosts[new_host].site = 'n/a'
+                        self.new_hosts[new_host].deviceinfo_url = n["deviceinfo_url"]
+                        #self.new_hosts[new_host].address = n["address"]
 
-        table = tables[0]
-        if len(table('tbody')) == 0 :
-            trs = table('tr', {'style': 'background: #ffc0c0;'}, recursive=False)
-        else :
-            tbody = table('tbody')[0]
-            trs = tbody('tr', recursive=False)
-        for tr in trs :
-            if len(tr('td', recursive=False)) > 1 :
-                n = dict()
-                tds = tr('td', recursive=False)
-                try :
-                    n["host"] = str(tds[0].a.string).replace('&gt;', '>')
-                except :
-                    n["host"] = 'xxxxx'
-                try :
-                    n["map"] = str(tds[3].a.string)
-                except :
-                    n["map"] = 'xxxxx'
-                try :
-                    n["deviceinfo_url"] = str(tds[0].a['href'])
-                except :
-                    n["deviceinfo_url"] = 'xxxxx'
-        
-                new_host = n["host"]
-                if not self.new_hosts.has_key(n["host"]):
-                    self.new_hosts[new_host] = GenericHost()
-                    self.new_hosts[new_host].name = n["host"]
-                    self.new_hosts[new_host].status = 'DOWN'
-                    self.new_hosts[new_host].last_check = 'n/a'
-                    self.new_hosts[new_host].duration = 'n/a'
-                    self.new_hosts[new_host].attempt = 'n/a'
-                    self.new_hosts[new_host].status_information = n["map"] 
-                    self.new_hosts[new_host].site = 'n/a'
-                    self.new_hosts[new_host].deviceinfo_url = n["deviceinfo_url"]
-                    #self.new_hosts[new_host].address = n["address"]
-
-        trs = table('tr', {'style': 'background: #c0c0ff;'}, recursive=False)
-        for tr in trs :
-            if len(tr('td', recursive=False)) > 1 :
-                n = dict()
-                tds = tr('td', recursive=False)
-                try :
-                    n["host"] = str(tds[0].a.string).replace('&gt;', '>')
-                except :
-                    n["host"] = 'xxxxx'
-                try :
-                    n["map"] = str(tds[3].a.string)
-                except :
-                    n["map"] = 'xxxxx'
-                try :
-                    n["deviceinfo_url"] = str(tds[0].a['href'])
-                except :
-                    n["deviceinfo_url"] = 'xxxxx'
-
-                new_host = n["host"]
-                if not self.new_hosts.has_key(n["host"]):
-                    self.new_hosts[new_host] = GenericHost()
-                    self.new_hosts[new_host].name = n["host"]
-                    self.new_hosts[new_host].status = 'DOWN'
-                    self.new_hosts[new_host].last_check = 'n/a'
-                    self.new_hosts[new_host].acknowledged = True
-                    self.new_hosts[new_host].duration = 'n/a'
-                    self.new_hosts[new_host].attempt = 'n/a'
-                    self.new_hosts[new_host].status_information = n["map"] 
-                    self.new_hosts[new_host].site = 'n/a'
-                    self.new_hosts[new_host].deviceinfo_url = n["deviceinfo_url"]
-                    #self.new_hosts[new_host].address = n["address"]
-
-        result = self.FetchURL(self.monitor_url+'/dude/main.html?page=services')
-        tables = result.result('table', {'class': 'tbl'}) 
-        if len(tables) == 0 :
-          result = self.FetchURL(self.monitor_url+'/dude/main.html', giveback="raw", cgi_data=cgi_data)
-          result = self.FetchURL(self.monitor_url+'/dude/main.html?page=services')
-          tables = result.result('table', {'class': 'tbl'}) 
-
-        table = tables[0]
-        if len(table('tbody')) == 0 :
-            trs = table('tr', {'style': 'background: #ffc0c0;'}, recursive=False)
-        else :
-            tbody = table('tbody')[0]
-            trs = tbody('tr', recursive=False)
-        trs.pop(0)
-        for tr in trs :
-            if len(tr('td', recursive=False)) > 1 :
-                n = dict()
-                tds = tr('td', recursive=False)
-
-                n["host"] = str(tds[2].a.string).replace('&gt;', '>')
-                n["service"] = str(tds[3].a.string)
-
-                new_host = n["host"]
-                if not self.new_hosts.has_key(n["host"]):
-                    self.new_hosts[new_host] = GenericHost()
-                    self.new_hosts[new_host].name = n["host"]
-                    self.new_hosts[new_host].status = 'UP'
-                if not self.new_hosts[new_host].services.has_key(n["service"]):
-                    self.new_hosts[new_host].services[n['service']] = GenericService()
-                    self.new_hosts[new_host].services[n['service']].host = n["host"]
-                    self.new_hosts[new_host].services[n['service']].name = n["service"]
-                    self.new_hosts[new_host].services[n['service']].server = self.name
-                    self.new_hosts[new_host].services[n['service']].status = 'CRITICAL'
-                    self.new_hosts[new_host].services[n['service']].attempt = 'n/a'
-                    self.new_hosts[new_host].services[n['service']].last_check = 'n/a'
-                    self.new_hosts[new_host].services[n['service']].duration = 'n/a'
-                    self.new_hosts[new_host].services[n['service']].status_information = 'n/a'
-                    self.new_hosts[new_host].services[n['service']].passiveonly = False
-                    self.new_hosts[new_host].services[n['service']].notifications_disabled = False
-                    self.new_hosts[new_host].services[n['service']].flapping = False
-                    self.new_hosts[new_host].services[n['service']].acknowledged = False 
-                    self.new_hosts[new_host].services[n['service']].scheduled_downtime = False
-                    self.new_hosts[new_host].services[n['service']].status_type = 'n/a'
-
-        # Acknowledged services are listed as such AND as down
-        if len(table('tbody')) == 0 :
             trs = table('tr', {'style': 'background: #c0c0ff;'}, recursive=False)
-        else :
-            tbody = table('tbody')[0]
-            trs = tbody('tr', recursive=False)
-        trs.pop(0)
-        for tr in trs :
-            if len(tr('td', recursive=False)) > 1 :
-                n = dict()
-                tds = tr('td', recursive=False)
+            for tr in trs :
+                if len(tr('td', recursive=False)) > 1 :
+                    n = dict()
+                    tds = tr('td', recursive=False)
+                    try :
+                        n["host"] = str(tds[0].a.string).replace('&gt;', '>')
+                    except :
+                        n["host"] = 'xxxxx'
+                    try :
+                        n["map"] = str(tds[3].a.string)
+                    except :
+                        n["map"] = 'xxxxx'
+                    try :
+                        n["deviceinfo_url"] = str(tds[0].a['href'])
+                    except :
+                        n["deviceinfo_url"] = 'xxxxx'
 
-                n["host"] = str(tds[2].a.string)
-                n["service"] = str(tds[3].a.string)
+                    new_host = n["host"]
+                    if not self.new_hosts.has_key(n["host"]):
+                        self.new_hosts[new_host] = GenericHost()
+                        self.new_hosts[new_host].name = n["host"]
+                        self.new_hosts[new_host].status = 'DOWN'
+                        self.new_hosts[new_host].last_check = 'n/a'
+                        self.new_hosts[new_host].acknowledged = True
+                        self.new_hosts[new_host].duration = 'n/a'
+                        self.new_hosts[new_host].attempt = 'n/a'
+                        self.new_hosts[new_host].status_information = n["map"] 
+                        self.new_hosts[new_host].site = 'n/a'
+                        self.new_hosts[new_host].deviceinfo_url = n["deviceinfo_url"]
+                        #self.new_hosts[new_host].address = n["address"]
+        except:
+            # set checking flag back to False
+            self.isChecking = False
+            result, error = self.Error(sys.exc_info())
+            return Result(result=result, error=error)
 
-                if self.new_hosts.has_key(n["host"]):
-                    if self.new_hosts[n["host"]].services.has_key(n["service"]):
-                        self.new_hosts[n["host"]].services[n["service"]].acknowledged = True
+        try:
+            result = self.FetchURL(self.monitor_url+'/dude/main.html?page=services')
+            tables = result.result('table', {'class': 'tbl'}) 
+            if len(tables) == 0 :
+              result = self.FetchURL(self.monitor_url+'/dude/main.html', giveback="raw", cgi_data=cgi_data)
+              result = self.FetchURL(self.monitor_url+'/dude/main.html?page=services')
+              tables = result.result('table', {'class': 'tbl'}) 
+
+            table = tables[0]
+            if len(table('tbody')) == 0 :
+                trs = table('tr', {'style': 'background: #ffc0c0;'}, recursive=False)
+            else :
+                tbody = table('tbody')[0]
+                trs = tbody('tr', recursive=False)
+            #trs.pop(0)
+            for tr in trs :
+                if len(tr('td', recursive=False)) > 1 :
+                    n = dict()
+                    tds = tr('td', recursive=False)
+
+                    n["host"] = str(tds[2].a.string).replace('&gt;', '>')
+                    n["service"] = str(tds[3].a.string)
+
+                    new_host = n["host"]
+                    if not self.new_hosts.has_key(n["host"]):
+                        self.new_hosts[new_host] = GenericHost()
+                        self.new_hosts[new_host].name = n["host"]
+                        self.new_hosts[new_host].status = 'UP'
+                    if not self.new_hosts[new_host].services.has_key(n["service"]):
+                        self.new_hosts[new_host].services[n['service']] = GenericService()
+                        self.new_hosts[new_host].services[n['service']].host = n["host"]
+                        self.new_hosts[new_host].services[n['service']].name = n["service"]
+                        self.new_hosts[new_host].services[n['service']].server = self.name
+                        self.new_hosts[new_host].services[n['service']].status = 'CRITICAL'
+                        self.new_hosts[new_host].services[n['service']].attempt = 'n/a'
+                        self.new_hosts[new_host].services[n['service']].last_check = 'n/a'
+                        self.new_hosts[new_host].services[n['service']].duration = 'n/a'
+                        self.new_hosts[new_host].services[n['service']].status_information = 'n/a'
+                        self.new_hosts[new_host].services[n['service']].passiveonly = False
+                        self.new_hosts[new_host].services[n['service']].notifications_disabled = False
+                        self.new_hosts[new_host].services[n['service']].flapping = False
+                        self.new_hosts[new_host].services[n['service']].acknowledged = False 
+                        self.new_hosts[new_host].services[n['service']].scheduled_downtime = False
+                        self.new_hosts[new_host].services[n['service']].status_type = 'n/a'
+
+            # Acknowledged services are listed as such AND as down
+            if len(table('tbody')) == 0 :
+                trs = table('tr', {'style': 'background: #c0c0ff;'}, recursive=False)
+            else :
+                tbody = table('tbody')[0]
+                trs = tbody('tr', recursive=False)
+            #trs.pop(0)
+            for tr in trs :
+                if len(tr('td', recursive=False)) > 1 :
+                    n = dict()
+                    tds = tr('td', recursive=False)
+
+                    n["host"] = str(tds[2].a.string)
+                    n["service"] = str(tds[3].a.string)
+
+                    if self.new_hosts.has_key(n["host"]):
+                        if self.new_hosts[n["host"]].services.has_key(n["service"]):
+                            self.new_hosts[n["host"]].services[n["service"]].acknowledged = True
+        except:
+            # set checking flag back to False
+            self.isChecking = False
+            result, error = self.Error(sys.exc_info())
+            return Result(result=result, error=error)
 
         self.isChecking = False
         return Result()
